@@ -2,7 +2,7 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
-	"error"
+	"errors"
 	"time"
 
 	"github.com/astaxie/beego"
@@ -30,5 +30,89 @@ func InitCache() {
 
 func SetCache(key string,value interface{},timeout int) error {
 	data, err := Encode(value)
-	// Code ....
-}	
+	if err != nil {
+		return err
+	}
+	if cc == nil {
+		return errors.New("cc is nil")
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			LogError(r)
+			cc = nil
+		}
+	}()
+
+	timeouts := time.Duration(timeout) * time.Second
+	err = cc.Put(key,data,timeouts)
+	if err != nil {
+		LogError(err)
+		LogError("SetCache 失败，key："+key)
+		return err
+	} else {
+		return nil
+	}
+}
+
+func GetCache(key string,to interface{}) error {
+	if cc == nil {
+		return errors.New("cc is nil")
+	}
+	defer func(){
+		if r := recover(); r != nil {
+			LogError(r)
+			cc = nil
+		}
+	}()
+
+	data := cc.Get(key)
+	if data == nil {
+		return errors.New("Cache 不存在")
+	}
+
+	err := Decode(data.([]byte),to)
+	if err != nil {
+		LogError(err)
+		LogError("GetCache 失败，key："+key)
+	}
+	return err
+}
+// DelCache
+func DelCache(key string) error {
+	if cc == nil {
+		return errors.New("cc is nil")
+	}
+	defer func(){
+		if r := recover(); r != nil {
+			cc = nil
+		}
+	}()
+	err := cc.Delete(key)
+	if err != nil {
+		return errors.New("Cache 删除失败")
+	} else {
+		return nil
+	}
+}
+
+// Encode
+// 用gob进行数据编码
+func Encode(data interface{}) ([]byte,error) {
+	buf := bytes.NewBuffer(nil)
+	enc := gob.NewEncoder(buf)
+	err := enc.Encode(data)
+
+	if err != nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
+// Decode
+// 用gob进行数据解码
+func  Decode(data []byte,to interface{}) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	return dec.Decode(to)
+}

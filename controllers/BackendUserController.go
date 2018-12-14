@@ -6,9 +6,9 @@ import (
 	"strings"
 	"encoding/json"
 
-	"github.com/lhtzbj12/sdrms/enums"
-	"github.com/lhtzbj12/sdrms/models"
-	"github.com/lhtzbj12/sdrms/utils"
+	"myproject/enums"
+	"myproject/models"
+	"myproject/utils"
 
 	"github.com/astaxie/beego/orm"
 
@@ -39,7 +39,7 @@ func (c *BackendUserController) Index() {
 	c.setTpl()
 	c.LayoutSections = make(map[string]string)
 	c.LayoutSections["headcssjs"] = "backenduser/index_headcssjs.html"
-	c.LayoutSections["footerjs"] = "backenduser.index_footerjs.html"
+	c.LayoutSections["footerjs"] = "backenduser/index_footerjs.html"
 	//页面里按钮权限控制
 	c.Data["canEdit"] = c.checkActionAuthor("BackendUserController","Edit")
 	c.Data["canDelete"] = c.checkActionAuthor("BackendUserController","Delete")
@@ -49,7 +49,7 @@ func (c *BackendUserController) Index() {
 
 func (c *BackendUserController) DataGrid(){
 	//直接反序化获取json格式的requestbody里的值（要求配置文件里 copyrequestbody=true）
-	var params models.BackendQueryParam
+	var params models.BackendUserQueryParam
 	json.Unmarshal(c.Ctx.Input.RequestBody,&params)
 
 	data,total := models.BackendUserPageList(&params)
@@ -87,13 +87,13 @@ func (c *BackendUserController) Edit() {
 		roleIds = append(roleIds,strconv.Itoa(item.Role.Id))
 	}
 	c.Data["roles"] = strings.Join(roleIds,",")
-	c.setTpl("backenduser/edit.html","shared/layout_pullbox.hmtl")
+	c.setTpl("backenduser/edit.html","shared/layout_pullbox.html")
 	c.LayoutSections = make(map[string]string)
 	c.LayoutSections["footerjs"] = "backenduser/edit_footerjs.html"
 }
 
 func (c *BackendUserController) Save() {
-	m := models.BackendUser()
+	m := models.BackendUser{}
 	o := orm.NewOrm()
 	var err error
 	if err = c.ParseForm(&m); err != nil {
@@ -145,7 +145,7 @@ func (c *BackendUserController) Delete() {
 			ids = append(ids,id)
 		}
 	}
-	query := orm.NewOrm().QueryTable(models.BackedUserTBName())
+	query := orm.NewOrm().QueryTable(models.BackendUserTBName())
 	if num,err := query.Filter("id_in",ids).Delete(); err == nil {
 		c.jsonResult(enums.JRCodeSucc,fmt.Sprintf("成功删除 %d 项",num),0)
 	} else {
